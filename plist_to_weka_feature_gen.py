@@ -260,6 +260,7 @@ def generate_and_write_best_combinations(data, output_directory):
                                                                        offset[0])
                         numpy_str_arr = numpy.char.mod('%f', vector_angle_hist)
                         file.write(','.join(numpy_str_arr))
+                        file.write(',')
 
                         (cell_hist, row_hist, column_hist) = \
                             get_point_area_histogram(sample['points'], divisions, divisions,
