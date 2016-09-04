@@ -69,18 +69,18 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
     # ax = fig.add_subplot(111, aspect='equal')
 
     if do_cells:
-    for horizontal_division in range(horizontal_divisions):
-        for vertical_division in range(vertical_divisions):
-            rect = get_rect(min_x + horizontal_division * cell_width,
-                            min_y + vertical_division * cell_height,
-                            cell_width,
-                            cell_height)
-            cell_hist.append(count_points_in_rect(coords, rect))
+        for horizontal_division in range(horizontal_divisions):
+            for vertical_division in range(vertical_divisions):
+                rect = get_rect(min_x + horizontal_division * cell_width,
+                                min_y + vertical_division * cell_height,
+                                cell_width,
+                                cell_height)
+                cell_hist.append(count_points_in_rect(coords, rect))
 
-            # ax.add_patch(
-            #     patches.Rectangle((min_x + horizontal_division * cell_width,
-            #                        min_y + vertical_division * cell_height), cell_width,
-            #                       cell_height, fill=False))
+                # ax.add_patch(
+                #     patches.Rectangle((min_x + horizontal_division * cell_width,
+                #                        min_y + vertical_division * cell_height), cell_width,
+                #                       cell_height, fill=False))
 
     if do_columns:
         for horizontal_division in range(horizontal_divisions):
@@ -136,20 +136,22 @@ def write_bin_header(file, dataset_name, bins):
                                                   os.linesep))
 
 
-def main():
-    data = transform_plist('samples.plist')
-    add_neighboring_pairs(data)
-    add_angles(data)
-    output_directory = 'weka-files'
+def write_area_header(file, dataset_name, divisions, histogram_combinations):
+    file.write('@RELATION {}{}'.format(dataset_name, os.linesep))
+    if histogram_combinations[0]:
+        for cell in range(1, divisions**2 + 1):
+            file.write('@ATTRIBUTE cell{} NUMERIC{}'.format(cell, os.linesep))
+    if histogram_combinations[1]:
+        for row in range(1, divisions + 1):
+            file.write('@ATTRIBUTE row{} NUMERIC{}'.format(row, os.linesep))
+    if histogram_combinations[2]:
+        for column in range(1, divisions + 1):
+            file.write('@ATTRIBUTE column{} NUMERIC{}'.format(column, os.linesep))
 
-    if os.path.exists(output_directory):
-        if os.path.isdir:
-            shutil.rmtree(output_directory)
-        else:
-            raise Exception(output_directory + ' is not a directory')
-
-    os.mkdir(output_directory)
-    generate_and_write_vector_histogram(data, output_directory)
+    file.write(
+        '@ATTRIBUTE class {{{}}}{}@DATA{}'.format(','.join(map(chr, range(ord('A'), ord('Z') + 1))),
+                                                  os.linesep,
+                                                  os.linesep))
 
 
 def loop_number(value, min, max):
@@ -174,6 +176,54 @@ def generate_and_write_vector_histogram(data, output_directory):
                 file.write(',' + sample['class'] + os.linesep)
             print('wrote ' + file.name)
             file.close()
+
+
+def generate_and_write_point_area_histogram(data, output_directory):
+    for divisions in [2, 3, 4, 5, 6, 8]:
+        for histogram_combinations in [((True, False, False), 'cell'),
+                                       ((False, True, True), 'rowColumn'),
+                                       ((True, True, True), 'cellRowColumn')]:
+            dataset_name = \
+                'charReg-pointAreaHistogram-{}divisions-{}'.format(divisions,
+                                                                   histogram_combinations[1])
+            file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
+            write_area_header(file, dataset_name, divisions, histogram_combinations[0])
+            for sample in data:
+                (cell_hist, row_hist, column_hist) = \
+                    get_point_area_histogram(sample['points'], divisions, divisions,
+                                             do_cells=histogram_combinations[0][0],
+                                             do_rows=histogram_combinations[0][1],
+                                             do_columns=histogram_combinations[0][2])
+                feature_sample = []
+
+                if histogram_combinations[0][0]:
+                    feature_sample += cell_hist
+                if histogram_combinations[0][1]:
+                    feature_sample += row_hist
+                if histogram_combinations[0][2]:
+                    feature_sample += column_hist
+
+                file.write(','.join(map(str, feature_sample)))
+                file.write(',' + sample['class'] + os.linesep)
+            print('wrote ' + file.name)
+            file.close()
+
+
+def main():
+    data = transform_plist('samples.plist')
+    add_neighboring_pairs(data)
+    add_angles(data)
+    output_directory = 'weka-files'
+
+    if os.path.exists(output_directory):
+        if os.path.isdir:
+            shutil.rmtree(output_directory)
+        else:
+            raise Exception(output_directory + ' is not a directory')
+
+    os.mkdir(output_directory)
+    # generate_and_write_vector_histogram(data, output_directory)
+    generate_and_write_point_area_histogram(data, output_directory)
 
 
 if __name__ == '__main__':
