@@ -266,7 +266,8 @@ def generate_and_write_best_combinations(data, output_directory):
 
                     for sample in data:
                         vector_angle_hist = get_offset_angle_histogram(sample['angles'], bins,
-                                                                       offset[0])
+                                                                       offset[0],
+                                                                       lengths=sample['lengths'])
                         numpy_str_arr = numpy.char.mod('%f', vector_angle_hist)
                         file.write(','.join(numpy_str_arr))
                         file.write(',')
@@ -305,9 +306,9 @@ def main():
             raise Exception(output_directory + ' is not a directory')
 
     os.mkdir(output_directory)
-    generate_and_write_vector_angle_histogram(data, output_directory)
+    # generate_and_write_vector_angle_histogram(data, output_directory)
     # generate_and_write_point_area_histogram(data, output_directory)
-    # generate_and_write_best_combinations(data, output_directory)
+    generate_and_write_best_combinations(data, output_directory)
 
 
 if __name__ == '__main__':
