@@ -2,10 +2,9 @@ import functools
 import math
 import os
 import plistlib
+import shutil
 
 import numpy
-import matplotlib.patches as patches
-import matplotlib.pyplot as plt
 
 import geometry
 
@@ -66,8 +65,8 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
     column_hist = []
     row_hist = []
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, aspect='equal')
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, aspect='equal')
 
     for horizontal_division in range(horizontal_divisions):
         for vertical_division in range(vertical_divisions):
@@ -77,10 +76,10 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
                             cell_height)
             cell_hist.append(count_points_in_rect(coords, rect))
 
-            ax.add_patch(
-                patches.Rectangle((min_x + horizontal_division * cell_width,
-                                   min_y + vertical_division * cell_height), cell_width,
-                                  cell_height, fill=False))
+            # ax.add_patch(
+            #     patches.Rectangle((min_x + horizontal_division * cell_width,
+            #                        min_y + vertical_division * cell_height), cell_width,
+            #                       cell_height, fill=False))
 
     if do_columns:
         for horizontal_division in range(horizontal_divisions):
@@ -107,8 +106,8 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
             #     patches.Rectangle((min_x, min_y + vertical_division * cell_height),
             #                       square_length, cell_height, fill=False))
 
-    for coord in coords:
-        ax.scatter(coord[0], coord[1])
+    # for coord in coords:
+    #     ax.scatter(coord[0], coord[1])
 
     return cell_hist, column_hist, row_hist
 
@@ -142,21 +141,14 @@ def main():
     add_angles(data)
     output_directory = 'weka-files'
 
-    # if os.path.exists(output_directory):
-    #     if os.path.isdir:
-    #         shutil.rmtree(output_directory)
-    #     else:
-    #         raise Exception(output_directory + ' is not a directory')
-    #
-    # os.mkdir(output_directory)
-    # generate_and_write_vector_histogram(data, output_directory)
+    if os.path.exists(output_directory):
+        if os.path.isdir:
+            shutil.rmtree(output_directory)
+        else:
+            raise Exception(output_directory + ' is not a directory')
 
-    first_i = data[0 * 26 + (ord('I') - ord('A'))]
-    print(get_point_area_histogram(first_i['points'], 4, 4, True, True))
-    second_i = data[1 * 26 + (ord('I') - ord('A'))]
-    print(get_point_area_histogram(second_i['points'], 4, 4, True, True))
-
-    # print(get_point_area_histogram([(0, 0), (0, 1), (0, 2), (0, 3), (0,4)], 4, 4, False, False))
+    os.mkdir(output_directory)
+    generate_and_write_vector_histogram(data, output_directory)
 
 
 def loop_number(value, min, max):
@@ -185,4 +177,4 @@ def generate_and_write_vector_histogram(data, output_directory):
 
 if __name__ == '__main__':
     main()
-    plt.show()
+    # plt.show()
