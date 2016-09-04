@@ -140,33 +140,38 @@ def norm_vector(vector):
     return [x / norm for x in vector]
 
 
-def write_bin_header(file, dataset_name, bins):
-    file.write('@RELATION {}{}'.format(dataset_name, os.linesep))
+def arff_write_vector_angle_attributes(file, bins):
     for bin in range(1, bins + 1):
-        file.write('@ATTRIBUTE bin{} NUMERIC{}'.format(bin, os.linesep))
-
-    file.write(
-        '@ATTRIBUTE class {{{}}}{}@DATA{}'.format(','.join(map(chr, range(ord('A'), ord('Z') + 1))),
-                                                  os.linesep,
-                                                  os.linesep))
+        arff_write_attribute(file, 'bin' + str(bin), 'NUMERIC')
 
 
-def write_area_header(file, dataset_name, divisions, histogram_combinations):
-    file.write('@RELATION {}{}'.format(dataset_name, os.linesep))
+def arff_write_point_area_attributes(file, divisions, histogram_combinations):
     if histogram_combinations[0]:
         for cell in range(1, divisions ** 2 + 1):
-            file.write('@ATTRIBUTE cell{} NUMERIC{}'.format(cell, os.linesep))
+            arff_write_attribute(file, 'cell' + str(cell), 'NUMERIC')
     if histogram_combinations[1]:
         for row in range(1, divisions + 1):
-            file.write('@ATTRIBUTE row{} NUMERIC{}'.format(row, os.linesep))
+            arff_write_attribute(file, 'row' + str(row), 'NUMERIC')
     if histogram_combinations[2]:
         for column in range(1, divisions + 1):
-            file.write('@ATTRIBUTE column{} NUMERIC{}'.format(column, os.linesep))
+            arff_write_attribute(file, 'column' + str(column), 'NUMERIC')
 
-    file.write(
-        '@ATTRIBUTE class {{{}}}{}@DATA{}'.format(','.join(map(chr, range(ord('A'), ord('Z') + 1))),
-                                                  os.linesep,
-                                                  os.linesep))
+
+def arff_write_relation(file, relation_name):
+    file.write('@RELATION {}{}'.format(relation_name, os.linesep))
+
+
+def arff_write_attribute(file, name, type):
+    file.write('@ATTRIBUTE {} {}{}'.format(name, type, os.linesep))
+
+
+def arff_write_data_start_marker(file):
+    file.write('@DATA' + os.linesep)
+
+
+def arff_write_alphabet_class_attribute(file):
+    arff_write_attribute(file, 'class',
+                         '{' + ','.join(map(chr, range(ord('A'), ord('Z') + 1))) + '}')
 
 
 def loop_number(value, min, max):
@@ -183,7 +188,12 @@ def generate_and_write_vector_histogram(data, output_directory):
         for offset in [(0, 'no'), (360 / bins / 2, 'half'), (360 / bins / 4, 'quarter')]:
             dataset_name = 'charReg-vectorHistogram-{:02d}bins-{}Offset'.format(bins, offset[1])
             file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
-            write_bin_header(file, dataset_name, bins)
+
+            arff_write_relation(file, dataset_name)
+            arff_write_vector_angle_attributes(file, bins)
+            arff_write_alphabet_class_attribute(file)
+            arff_write_data_start_marker(file)
+
             for sample in data:
                 histogram = get_offset_angle_histogram(sample['angles'], bins, offset[0])
                 numpy_str_arr = numpy.char.mod('%f', histogram)
@@ -202,7 +212,12 @@ def generate_and_write_point_area_histogram(data, output_directory):
                 'charReg-pointAreaHistogram-{}divisions-{}'.format(divisions,
                                                                    histogram_combinations[1])
             file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
-            write_area_header(file, dataset_name, divisions, histogram_combinations[0])
+
+            arff_write_relation(file, dataset_name)
+            arff_write_point_area_attributes(file, divisions, histogram_combinations[0])
+            arff_write_alphabet_class_attribute(file)
+            arff_write_data_start_marker(file)
+
             for sample in data:
                 (cell_hist, row_hist, column_hist) = \
                     get_point_area_histogram(sample['points'], divisions, divisions,
@@ -224,6 +239,48 @@ def generate_and_write_point_area_histogram(data, output_directory):
             file.close()
 
 
+def generate_and_write_best_combinations(data, output_directory):
+    for bins in [8, 12]:
+        for offset in [(360 / bins / 2, 'half'), (360 / bins / 4, 'quarter')]:
+            for divisions in [4, 5, 6]:
+                for histogram_combinations in [((True, False, False), 'cell'),
+                                               ((True, True, True), 'cellRowColumn')]:
+                    dataset_name = 'charReg-combinedHistogram-{}divisions-{}-{:02d}bins-{}Offset'. \
+                        format(divisions, histogram_combinations[1], bins, offset[1])
+                    file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
+
+                    arff_write_relation(file, dataset_name)
+                    arff_write_vector_angle_attributes(file, bins)
+                    arff_write_point_area_attributes(file, divisions, histogram_combinations[0])
+                    arff_write_alphabet_class_attribute(file)
+                    arff_write_data_start_marker(file)
+
+                    for sample in data:
+                        vector_angle_hist = get_offset_angle_histogram(sample['angles'], bins,
+                                                                       offset[0])
+                        numpy_str_arr = numpy.char.mod('%f', vector_angle_hist)
+                        file.write(','.join(numpy_str_arr))
+
+                        (cell_hist, row_hist, column_hist) = \
+                            get_point_area_histogram(sample['points'], divisions, divisions,
+                                                     do_cells=histogram_combinations[0][0],
+                                                     do_rows=histogram_combinations[0][1],
+                                                     do_columns=histogram_combinations[0][2])
+                        point_area_histogram = []
+                        if histogram_combinations[0][0]:
+                            point_area_histogram += cell_hist
+                        if histogram_combinations[0][1]:
+                            point_area_histogram += row_hist
+                        if histogram_combinations[0][2]:
+                            point_area_histogram += column_hist
+                        file.write(','.join(map(str, point_area_histogram)))
+
+                        file.write(',' + sample['class'] + os.linesep)
+
+                    print('wrote ' + file.name)
+                    file.close()
+
+
 def main():
     data = transform_plist('samples.plist')
     add_neighboring_pairs(data)
@@ -238,7 +295,8 @@ def main():
 
     os.mkdir(output_directory)
     # generate_and_write_vector_histogram(data, output_directory)
-    generate_and_write_point_area_histogram(data, output_directory)
+    # generate_and_write_point_area_histogram(data, output_directory)
+    generate_and_write_best_combinations(data, output_directory)
 
 
 if __name__ == '__main__':
