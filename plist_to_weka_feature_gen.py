@@ -29,6 +29,13 @@ def add_neighboring_pairs(data):
             sample['pairs'].append((current, nxt))
 
 
+def add_length(data):
+    for sample in data:
+        sample['lengths'] = []
+        for vector in sample['pairs']:
+            sample['lengths'].append(numpy.linalg.norm(vector))
+
+
 def add_angles(data):
     for sample in data:
         sample['angles'] = []
@@ -37,8 +44,9 @@ def add_angles(data):
                 math.degrees(math.atan2(pair[1][1] - pair[0][1], pair[1][0] - pair[0][0])))
 
 
-def get_offset_angle_histogram(angles, bins, offset, norm=True):
+def get_offset_angle_histogram(angles, bins, offset, norm=True, lengths=None):
     hist = numpy.histogram(list(map(lambda angle: loop_number(angle + offset, -180, 180), angles)),
+                           weights=lengths,
                            bins=bins,
                            range=(-180, 180))[0]
     if norm:
@@ -183,7 +191,7 @@ def loop_number(value, min, max):
     return value
 
 
-def generate_and_write_vector_histogram(data, output_directory):
+def generate_and_write_vector_angle_histogram(data, output_directory):
     for bins in [3, 4, 5, 6, 8, 10, 12, 16, 20]:
         for offset in [(0, 'no'), (360 / bins / 2, 'half'), (360 / bins / 4, 'quarter')]:
             dataset_name = 'charReg-vectorHistogram-{:02d}bins-{}Offset'.format(bins, offset[1])
@@ -195,7 +203,8 @@ def generate_and_write_vector_histogram(data, output_directory):
             arff_write_data_start_marker(file)
 
             for sample in data:
-                histogram = get_offset_angle_histogram(sample['angles'], bins, offset[0])
+                histogram = get_offset_angle_histogram(sample['angles'], bins, offset[0],
+                                                       lengths=sample['lengths'])
                 numpy_str_arr = numpy.char.mod('%f', histogram)
                 file.write(','.join(numpy_str_arr))
                 file.write(',' + sample['class'] + os.linesep)
@@ -285,6 +294,7 @@ def generate_and_write_best_combinations(data, output_directory):
 def main():
     data = transform_plist('samples.plist')
     add_neighboring_pairs(data)
+    add_length(data)
     add_angles(data)
     output_directory = 'weka-files'
 
@@ -295,9 +305,9 @@ def main():
             raise Exception(output_directory + ' is not a directory')
 
     os.mkdir(output_directory)
-    # generate_and_write_vector_histogram(data, output_directory)
+    generate_and_write_vector_angle_histogram(data, output_directory)
     # generate_and_write_point_area_histogram(data, output_directory)
-    generate_and_write_best_combinations(data, output_directory)
+    # generate_and_write_best_combinations(data, output_directory)
 
 
 if __name__ == '__main__':
