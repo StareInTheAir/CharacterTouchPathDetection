@@ -168,7 +168,7 @@ class Rect:
 
     def contains(self, pt):
         """Return true if a point is inside the rectangle."""
-        x, y = pt.as_tuple()
+        x, y = pt
         return (self.left <= x <= self.right and
                 self.top <= y <= self.bottom)
 

@@ -3,9 +3,11 @@ import math
 import os
 import plistlib
 
-import matplotlib.patches
-import matplotlib.pyplot
 import numpy
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+
+import geometry
 
 
 def transform_plist(plist_path):
@@ -64,42 +66,61 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
     column_hist = []
     row_hist = []
 
-    fig1 = matplotlib.pyplot.figure()
-    ax1 = fig1.add_subplot(111, aspect='equal')
-
-    print('should see pyploy')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, aspect='equal')
 
     for horizontal_division in range(horizontal_divisions):
         for vertical_division in range(vertical_divisions):
-            rect = matplotlib.patches.Rectangle(
-                (min_x + horizontal_division * cell_width, min_y + vertical_division * cell_height),
-                cell_width, cell_height)
+            rect = get_rect(min_x + horizontal_division * cell_width,
+                            min_y + vertical_division * cell_height,
+                            cell_width,
+                            cell_height)
             cell_hist.append(count_points_in_rect(coords, rect))
-            ax1.add_patch(rect)
 
-    ax1.scatter(list(map(lambda coord:coord[0], coords)), list(map(lambda coord:coord[1], coords)))
+            ax.add_patch(
+                patches.Rectangle((min_x + horizontal_division * cell_width,
+                                   min_y + vertical_division * cell_height), cell_width,
+                                  cell_height, fill=False))
 
     if do_columns:
         for horizontal_division in range(horizontal_divisions):
-            rect = matplotlib.patches.Rectangle(
-                (min_x + horizontal_division * cell_width, 0),
-                cell_width, square_length)
+            rect = get_rect(min_x + horizontal_division * cell_width,
+                            min_y,
+                            cell_width,
+                            square_length)
+
             column_hist.append(count_points_in_rect(coords, rect))
+
+            # ax.add_patch(
+            #     patches.Rectangle((min_x + horizontal_division * cell_width, min_y),
+            #                       cell_width, square_length, fill=False))
 
     if do_rows:
         for vertical_division in range(vertical_divisions):
-            rect = matplotlib.patches.Rectangle(
-                (0, min_y + vertical_division * cell_height),
-                square_length, cell_height)
+            rect = get_rect(min_x,
+                            min_y + vertical_division * cell_height,
+                            square_length,
+                            cell_height)
             row_hist.append(count_points_in_rect(coords, rect))
 
+            # ax.add_patch(
+            #     patches.Rectangle((min_x, min_y + vertical_division * cell_height),
+            #                       square_length, cell_height, fill=False))
+
+    for coord in coords:
+        ax.scatter(coord[0], coord[1])
+
     return cell_hist, column_hist, row_hist
+
+
+def get_rect(x, y, width, height):
+    return geometry.Rect(geometry.Point(x, y), geometry.Point(x + width, y + height))
 
 
 def count_points_in_rect(coords, rect):
     bucket_value = 0
     for coord in coords:
-        if rect.contains_point(coord):
+        if rect.contains(coord):
             bucket_value += 1
     return bucket_value
 
@@ -130,10 +151,21 @@ def main():
     # os.mkdir(output_directory)
     # generate_and_write_vector_histogram(data, output_directory)
 
-    # print(get_point_area_histogram(data[0 * 26 + (ord('I') - ord('A'))]['points'], 4, 4, True, True))
-    # print(get_point_area_histogram(data[1 * 26 + (ord('I') - ord('A'))]['points'], 4, 4, True, True))
+    first_i = data[0 * 26 + (ord('I') - ord('A'))]
+    print(get_point_area_histogram(first_i['points'], 4, 4, True, True))
+    second_i = data[1 * 26 + (ord('I') - ord('A'))]
+    print(get_point_area_histogram(second_i['points'], 4, 4, True, True))
 
-    print(get_point_area_histogram([(1, 1), (1, 2), (2, 1), (2, 2)], 2, 2))
+    # print(get_point_area_histogram([(0, 0), (0, 1), (0, 2), (0, 3), (0,4)], 4, 4, False, False))
+
+
+def loop_number(value, min, max):
+    range = abs(min - max)
+    while value > max:
+        value -= range
+    while value < min:
+        value += range
+    return value
 
 
 def generate_and_write_vector_histogram(data, output_directory):
@@ -151,15 +183,6 @@ def generate_and_write_vector_histogram(data, output_directory):
             file.close()
 
 
-def loop_number(value, min, max):
-    range = abs(min - max)
-    while value > max:
-        value -= range
-    while value < min:
-        value += range
-    return value
-
-
 if __name__ == '__main__':
     main()
-    matplotlib.pyplot.show()
+    plt.show()
