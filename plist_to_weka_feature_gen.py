@@ -47,7 +47,7 @@ def get_offset_angle_histogram(angles, bins, offset, norm=True):
 
 
 def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
-                             do_rows=False, do_columns=False):
+                             do_cells=False, do_rows=False, do_columns=False):
     min_x = functools.reduce(lambda acc, cur: min(acc, cur[0]), coords, math.inf)
     max_x = functools.reduce(lambda acc, cur: max(acc, cur[0]), coords, -math.inf)
     min_y = functools.reduce(lambda acc, cur: min(acc, cur[1]), coords, math.inf)
@@ -68,6 +68,7 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
     # fig = plt.figure()
     # ax = fig.add_subplot(111, aspect='equal')
 
+    if do_cells:
     for horizontal_division in range(horizontal_divisions):
         for vertical_division in range(vertical_divisions):
             rect = get_rect(min_x + horizontal_division * cell_width,
