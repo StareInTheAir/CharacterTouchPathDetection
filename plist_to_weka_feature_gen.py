@@ -47,7 +47,8 @@ def get_offset_angle_histogram(angles, bins, offset, norm=True):
 
 
 def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
-                             do_cells=False, do_rows=False, do_columns=False):
+                             do_cells=False, do_rows=False, do_columns=False,
+                             norm=True):
     min_x = functools.reduce(lambda acc, cur: min(acc, cur[0]), coords, math.inf)
     max_x = functools.reduce(lambda acc, cur: max(acc, cur[0]), coords, -math.inf)
     min_y = functools.reduce(lambda acc, cur: min(acc, cur[1]), coords, math.inf)
@@ -82,6 +83,9 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
                 #                        min_y + vertical_division * cell_height), cell_width,
                 #                       cell_height, fill=False))
 
+            if norm:
+                cell_hist = norm_vector(cell_hist)
+
     if do_columns:
         for horizontal_division in range(horizontal_divisions):
             rect = get_rect(min_x + horizontal_division * cell_width,
@@ -95,6 +99,9 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
             #     patches.Rectangle((min_x + horizontal_division * cell_width, min_y),
             #                       cell_width, square_length, fill=False))
 
+            if norm:
+                column_hist = norm_vector(column_hist)
+
     if do_rows:
         for vertical_division in range(vertical_divisions):
             rect = get_rect(min_x,
@@ -106,6 +113,9 @@ def get_point_area_histogram(coords, horizontal_divisions, vertical_divisions,
             # ax.add_patch(
             #     patches.Rectangle((min_x, min_y + vertical_division * cell_height),
             #                       square_length, cell_height, fill=False))
+
+            if norm:
+                row_hist = norm_vector(row_hist)
 
     # for coord in coords:
     #     ax.scatter(coord[0], coord[1])
@@ -125,6 +135,11 @@ def count_points_in_rect(coords, rect):
     return bucket_value
 
 
+def norm_vector(vector):
+    norm = numpy.linalg.norm(vector).astype(float)
+    return [x / norm for x in vector]
+
+
 def write_bin_header(file, dataset_name, bins):
     file.write('@RELATION {}{}'.format(dataset_name, os.linesep))
     for bin in range(1, bins + 1):
@@ -139,7 +154,7 @@ def write_bin_header(file, dataset_name, bins):
 def write_area_header(file, dataset_name, divisions, histogram_combinations):
     file.write('@RELATION {}{}'.format(dataset_name, os.linesep))
     if histogram_combinations[0]:
-        for cell in range(1, divisions**2 + 1):
+        for cell in range(1, divisions ** 2 + 1):
             file.write('@ATTRIBUTE cell{} NUMERIC{}'.format(cell, os.linesep))
     if histogram_combinations[1]:
         for row in range(1, divisions + 1):
