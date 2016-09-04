@@ -73,7 +73,7 @@ def main():
     #     print()
     for bins in [3, 4, 5, 6, 8, 10, 12, 16, 20]:
         for offset in [(0, 'no'), (360 / bins / 2, 'half'), (360 / bins / 4, 'quarter')]:
-            dataset_name = 'charReg-{:02d}bins-{}Offset'.format(bins, offset[1])
+            dataset_name = 'charReg-vectorHistogram-{:02d}bins-{}Offset'.format(bins, offset[1])
             file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
             write_bin_header(file, dataset_name, bins)
             for sample in data:
