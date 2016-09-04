@@ -1,9 +1,4 @@
-/lib/
 /.idea/
-/bin/
-/include/
-/weka-files/
-
-/.Python
 /*.iml
-/pip-selfcheck.json
+
+/weka-files/
