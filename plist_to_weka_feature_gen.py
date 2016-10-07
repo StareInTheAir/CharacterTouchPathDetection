@@ -1,4 +1,5 @@
 import functools
+import json
 import math
 import os
 import plistlib
@@ -15,9 +16,26 @@ def transform_plist(plist_path):
         lambda sample:
         {
             'class': chr(ord('A') + sample['label']),
-            'points': list(map(lambda point: (point['x'], point['y']), sample['points']))
+            'paths': [list(map(lambda point: (point['x'], point['y']), sample['points']))]
         },
         plist_dict['samples']
+    ))
+    return cleaned_data
+
+
+def transform_json(json_path):
+    json_dict = json.load(open(json_path))
+    cleaned_data = list(map(
+        lambda sample:
+        {
+            'class': sample['class'],
+            'paths': list(
+                map(lambda path: list(
+                    map(lambda point: (point['x'], point['y']), path)
+                ), sample['paths'])
+            )
+        },
+        json_dict
     ))
     return cleaned_data
 
@@ -25,22 +43,53 @@ def transform_plist(plist_path):
 def add_neighboring_pairs(data):
     for sample in data:
         sample['pairs'] = []
-        for current, nxt in zip(sample['points'][:], sample['points'][1:]):
+        for path in sample['paths']:
+            for current, nxt in zip(path[:], path[1:]):
             sample['pairs'].append((current, nxt))
+
+
+def add_interpath_neighboring_pairs(data):
+    for sample in data:
+        paths = sample['paths']
+        sample['interpath_pairs'] = []
+        for path_index in range(len(paths)):
+            # iterate through each path
+            path = paths[path_index]
+            for point_index in range(len(path)):
+                # iterate through each point in path
+                if point_index == len(path) - 1:
+                    # path[point_index] is the last point in current path
+                    if path_index != len(paths) - 1:
+                        # path is not the last element in paths
+                        current = path[point_index]
+                        nxt = paths[path_index + 1][0]
+                        sample['interpath_pairs'].append((current, nxt))
+                else:
+                    # path[point_index] isn't the last point in current path
+                    current = path[point_index]
+                    nxt = path[point_index + 1]
+                    sample['interpath_pairs'].append((current, nxt))
 
 
 def add_length(data):
     for sample in data:
         sample['lengths'] = []
+        sample['interpath_lengths'] = []
         for vector in sample['pairs']:
             sample['lengths'].append(numpy.linalg.norm(vector))
+        for vector in sample['interpath_pairs']:
+            sample['interpath_lengths'].append(numpy.linalg.norm(vector))
 
 
 def add_angles(data):
     for sample in data:
         sample['angles'] = []
+        sample['interpath_angles'] = []
         for pair in sample['pairs']:
             sample['angles'].append(
+                math.degrees(math.atan2(pair[1][1] - pair[0][1], pair[1][0] - pair[0][0])))
+        for pair in sample['interpath_pairs']:
+            sample['interpath_angles'].append(
                 math.degrees(math.atan2(pair[1][1] - pair[0][1], pair[1][0] - pair[0][0])))
 
 
