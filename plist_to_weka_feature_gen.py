@@ -226,6 +226,10 @@ def arff_write_data_start_marker(file):
     file.write('@DATA' + os.linesep)
 
 
+def arff_write_path_count_attribute(file):
+    arff_write_attribute(file, 'pathCount', 'NUMERIC')
+
+
 def arff_write_alphabet_class_attribute(file):
     arff_write_attribute(file, 'class',
                          '{' + ','.join(map(chr, range(ord('A'), ord('Z') + 1))) + '}')
@@ -243,19 +247,30 @@ def loop_number(value, min, max):
 def generate_and_write_vector_angle_histogram(data, output_directory):
     for bins in [3, 4, 5, 6, 8, 10, 12, 16, 20]:
         for offset in [(0, 'no'), (360 / bins / 2, 'half'), (360 / bins / 4, 'quarter')]:
-            dataset_name = 'charReg-vectorHistogram-{:02d}bins-{}Offset'.format(bins, offset[1])
+            for interpath in [True, False]:
+                dataset_name = 'charReg-vectorHistogram-{:02d}bins-{}Offset-interPath{}-pathCount'.format(bins,
+                                                                                                          offset[1],
+                                                                                                          interpath)
             file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
 
             arff_write_relation(file, dataset_name)
             arff_write_vector_angle_attributes(file, bins)
+                arff_write_path_count_attribute(file)
             arff_write_alphabet_class_attribute(file)
             arff_write_data_start_marker(file)
 
             for sample in data:
-                histogram = get_offset_angle_histogram(sample['angles'], bins, offset[0],
-                                                       lengths=sample['lengths'])
-                numpy_str_arr = numpy.char.mod('%f', histogram)
-                file.write(','.join(numpy_str_arr))
+                    if interpath:
+                        angles = sample['interpath_angles']
+                        lengths = sample['interpath_lengths']
+                    else:
+                        angles = sample['angles']
+                        lengths = sample['lengths']
+
+                    histogram = get_offset_angle_histogram(angles, bins, offset[0], lengths=lengths)
+                    numpy_str_arr_hist = numpy.char.mod('%f', histogram)
+                    file.write(','.join(numpy_str_arr_hist))
+                    file.write(str(len(sample['paths'])) + ',')
                 file.write(',' + sample['class'] + os.linesep)
             print('wrote ' + file.name)
             file.close()
@@ -342,12 +357,15 @@ def generate_and_write_best_combinations(data, output_directory):
 
 
 def main():
-    data = transform_plist('samples.plist')
+    data = transform_json('2016-09-12 12-04-33.024 260 samples.json')
+    # data = transform_plist('samples.plist')
+
     add_neighboring_pairs(data)
+    add_interpath_neighboring_pairs(data)
     add_length(data)
     add_angles(data)
-    output_directory = 'weka-files'
 
+    output_directory = 'weka-files'
     if os.path.exists(output_directory):
         if os.path.isdir:
             shutil.rmtree(output_directory)
@@ -355,9 +373,9 @@ def main():
             raise Exception(output_directory + ' is not a directory')
 
     os.mkdir(output_directory)
-    # generate_and_write_vector_angle_histogram(data, output_directory)
+    generate_and_write_vector_angle_histogram(data, output_directory)
     # generate_and_write_point_area_histogram(data, output_directory)
-    generate_and_write_best_combinations(data, output_directory)
+    # generate_and_write_best_combinations(data, output_directory)
 
 
 if __name__ == '__main__':
