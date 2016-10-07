@@ -45,7 +45,7 @@ def add_neighboring_pairs(data):
         sample['pairs'] = []
         for path in sample['paths']:
             for current, nxt in zip(path[:], path[1:]):
-            sample['pairs'].append((current, nxt))
+                sample['pairs'].append((current, nxt))
 
 
 def add_interpath_neighboring_pairs(data):
@@ -91,6 +91,13 @@ def add_angles(data):
         for pair in sample['interpath_pairs']:
             sample['interpath_angles'].append(
                 math.degrees(math.atan2(pair[1][1] - pair[0][1], pair[1][0] - pair[0][0])))
+
+
+def get_mean_angles(angles, temporal_divisions, weights=None):
+    # todo add weights to average calls
+    temporal_means = list(map(numpy.average, numpy.array_split(angles, temporal_divisions)))
+    overall_mean = numpy.average(angles, weights=weights)
+    return overall_mean, temporal_means
 
 
 def get_offset_angle_histogram(angles, bins, offset, norm=True, lengths=None):
@@ -202,6 +209,12 @@ def arff_write_vector_angle_attributes(file, bins):
         arff_write_attribute(file, 'bin' + str(bin), 'NUMERIC')
 
 
+def arff_write_temporal_means_attributes(file, temporal_divisions):
+    for div in range(1, temporal_divisions + 1):
+        arff_write_attribute(file, 'temporal' + str(div), 'NUMERIC')
+    arff_write_attribute(file, 'temporal_mean', 'NUMERIC')
+
+
 def arff_write_point_area_attributes(file, divisions, histogram_combinations):
     if histogram_combinations[0]:
         for cell in range(1, divisions ** 2 + 1):
@@ -251,15 +264,15 @@ def generate_and_write_vector_angle_histogram(data, output_directory):
                 dataset_name = 'charReg-vectorHistogram-{:02d}bins-{}Offset-interPath{}-pathCount'.format(bins,
                                                                                                           offset[1],
                                                                                                           interpath)
-            file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
+                file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
 
-            arff_write_relation(file, dataset_name)
-            arff_write_vector_angle_attributes(file, bins)
+                arff_write_relation(file, dataset_name)
+                arff_write_vector_angle_attributes(file, bins)
                 arff_write_path_count_attribute(file)
-            arff_write_alphabet_class_attribute(file)
-            arff_write_data_start_marker(file)
+                arff_write_alphabet_class_attribute(file)
+                arff_write_data_start_marker(file)
 
-            for sample in data:
+                for sample in data:
                     if interpath:
                         angles = sample['interpath_angles']
                         lengths = sample['interpath_lengths']
@@ -271,9 +284,9 @@ def generate_and_write_vector_angle_histogram(data, output_directory):
                     numpy_str_arr_hist = numpy.char.mod('%f', histogram)
                     file.write(','.join(numpy_str_arr_hist))
                     file.write(str(len(sample['paths'])) + ',')
-                file.write(',' + sample['class'] + os.linesep)
-            print('wrote ' + file.name)
-            file.close()
+                    file.write(',' + sample['class'] + os.linesep)
+                print('wrote ' + file.name)
+                file.close()
 
 
 def generate_and_write_point_area_histogram(data, output_directory):
@@ -356,6 +369,31 @@ def generate_and_write_best_combinations(data, output_directory):
                     file.close()
 
 
+def generate_and_vector_angle_temporal_divisions(data, output_directory):
+    for temporal_divisions in [2, 3, 4, 5]:
+        dataset_name = 'charReg-vectorAngle-pathCount-{}tempDivs'.format(temporal_divisions)
+        file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
+
+        arff_write_relation(file, dataset_name)
+        arff_write_path_count_attribute(file)
+        arff_write_temporal_means_attributes(file, temporal_divisions)
+        arff_write_alphabet_class_attribute(file)
+        arff_write_data_start_marker(file)
+
+        for sample in data:
+            angles = sample['interpath_angles']
+            file.write(str(len(sample['paths'])) + ',')
+
+            mean_angle, temporal_means = get_mean_angles(angles, temporal_divisions)
+            temporal_means.append(mean_angle)
+            numpy_str_arr_temporal_means = numpy.char.mod('%f', temporal_means)
+            file.write(','.join(numpy_str_arr_temporal_means))
+
+            file.write(',' + sample['class'] + os.linesep)
+        print('wrote ' + file.name)
+        file.close()
+
+
 def main():
     data = transform_json('2016-09-12 12-04-33.024 260 samples.json')
     # data = transform_plist('samples.plist')
@@ -373,7 +411,8 @@ def main():
             raise Exception(output_directory + ' is not a directory')
 
     os.mkdir(output_directory)
-    generate_and_write_vector_angle_histogram(data, output_directory)
+    generate_and_vector_angle_temporal_divisions(data, output_directory)
+    # generate_and_write_vector_angle_histogram(data, output_directory)
     # generate_and_write_point_area_histogram(data, output_directory)
     # generate_and_write_best_combinations(data, output_directory)
 

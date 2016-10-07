@@ -22,6 +22,8 @@ def main():
                    'weka.classifiers.trees.RandomTree',
                    'weka.classifiers.trees.DecisionStump']
 
+    classifiers = ['weka.classifiers.trees.RandomForest']
+
     output_file = open('weka-results.csv', 'w')
     csv_separator = ','
 
