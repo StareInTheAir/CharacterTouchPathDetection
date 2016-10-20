@@ -369,7 +369,7 @@ def generate_and_write_best_combinations(data, output_directory):
                     file.close()
 
 
-def generate_and_vector_angle_temporal_divisions(data, output_directory):
+def generate_and_write_vector_angle_temporal_divisions(data, output_directory):
     for temporal_divisions in [2, 3, 4, 5]:
         dataset_name = 'charReg-vectorAngle-pathCount-{}tempDivs'.format(temporal_divisions)
         file = open((os.path.join(output_directory, dataset_name) + '.arff'), 'w')
@@ -411,7 +411,7 @@ def main():
             raise Exception(output_directory + ' is not a directory')
 
     os.mkdir(output_directory)
-    generate_and_vector_angle_temporal_divisions(data, output_directory)
+    generate_and_write_vector_angle_temporal_divisions(data, output_directory)
     # generate_and_write_vector_angle_histogram(data, output_directory)
     # generate_and_write_point_area_histogram(data, output_directory)
     # generate_and_write_best_combinations(data, output_directory)
